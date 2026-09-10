@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import net.objecthunter.exp4j.ExpressionBuilder
+import java.text.DecimalFormat
 
 class CalculatorViewModel : ViewModel() {
 
@@ -36,7 +37,7 @@ class CalculatorViewModel : ViewModel() {
                 }
             }
             is CalculatorAction.Parentheses -> appendParentheses()
-            is CalculatorAction.Percentage -> appendOperator("%")
+            is CalculatorAction.Percentage -> appendPercentage()
         }
     }
 
@@ -49,7 +50,7 @@ class CalculatorViewModel : ViewModel() {
         if (inputExpression.isEmpty()) return
 
         val lastChar = inputExpression.last()
-        if (lastChar in listOf('+', '-', '×', '÷', '%')) {
+        if (lastChar in listOf('+', '-', '×', '÷')) {
             inputExpression = inputExpression.dropLast(1) + operator
         } else {
             inputExpression += operator
@@ -57,10 +58,19 @@ class CalculatorViewModel : ViewModel() {
         calculateLiveResult()
     }
 
+    private fun appendPercentage() {
+        if (inputExpression.isEmpty()) return
+        val lastChar = inputExpression.last()
+        if (lastChar.isDigit() || lastChar == ')') {
+            inputExpression += "%"
+            calculateLiveResult()
+        }
+    }
+
     private fun appendDecimal() {
         val lastToken = inputExpression.split('+', '-', '×', '÷', '%').lastOrNull() ?: ""
         if (!lastToken.contains('.')) {
-            inputExpression += if (inputExpression.isEmpty() || inputExpression.last() !in '0'..'9') "0." else "."
+            inputExpression += if (inputExpression.isEmpty() || !inputExpression.last().isDigit()) "0." else "."
             calculateLiveResult()
         }
     }
@@ -69,7 +79,7 @@ class CalculatorViewModel : ViewModel() {
         val openCount = inputExpression.count { it == '(' }
         val closeCount = inputExpression.count { it == ')' }
 
-        inputExpression += if (openCount > closeCount && inputExpression.last().isDigit()) {
+        inputExpression += if (openCount > closeCount && inputExpression.isNotEmpty() && inputExpression.last().isDigit()) {
             ")"
         } else {
             "("
@@ -84,10 +94,14 @@ class CalculatorViewModel : ViewModel() {
         }
 
         try {
-            val parsedExpression = inputExpression
+            var parsedExpression = inputExpression
                 .replace("×", "*")
                 .replace("÷", "/")
-                .replace("%", "/100")
+
+            // Convert numbers with % (e.g., 5% -> (5/100))
+            parsedExpression = parsedExpression.replace(Regex("(\\d+(\\.\\d+)?)%")) { matchResult ->
+                "(${matchResult.groupValues[1]}/100)"
+            }
 
             val expression = ExpressionBuilder(parsedExpression).build()
             val eval = expression.evaluate()
@@ -97,7 +111,8 @@ class CalculatorViewModel : ViewModel() {
             } else if (eval == eval.toLong().toDouble()) {
                 eval.toLong().toString()
             } else {
-                eval.toString()
+                val formatter = DecimalFormat("#.########")
+                formatter.format(eval)
             }
         } catch (e: Exception) {
             liveResult = ""
