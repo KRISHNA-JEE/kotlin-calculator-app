@@ -22,7 +22,8 @@ A modern, responsive, and robust Android calculator application built with Kotli
 ## 📁 Project Structure
 
 ```text
-com.example.codenimbuscalculator/
+app/src/main/java/com/example/codenimbuscalculator/
+├── ui/theme/                  # Jetpack Compose theme configuration (Color, Type, Theme)
 ├── MainActivity.kt           # Entry point and Jetpack Compose UI Grid layout
 └── CalculatorViewModel.kt    # State management, user actions, & exp4j evaluation engine
 
